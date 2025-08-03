@@ -1,32 +1,16 @@
 "use client";
 
+import { upgradeTier } from "@/server/upgrade-tier";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-export default function SelectTierPage() {
+const TierForm = () => {
+  const [tier, setTier] = useState<
+    "free" | "silver" | "gold" | "platinum" | null
+  >(null);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const [tier, setTier] = useState<string>("");
-
-  // Prefill if tier exists
-  useEffect(() => {
-    if (isLoaded && user) {
-      const currentTier = user.unsafeMetadata?.tier as string;
-      if (currentTier) {
-        setTier(currentTier);
-      }
-    }
-  }, [isLoaded, user]);
 
   const handleSubmit = async () => {
     if (!tier) {
@@ -34,48 +18,47 @@ export default function SelectTierPage() {
       return;
     }
 
-    try {
-      await user?.update({
-        unsafeMetadata: {
-          tier,
-        },
-      });
-
-      toast.success(`Tier set to ${tier}`);
-      router.push("/events");
-    } catch (error) {
-      toast.error("Failed to update tier. Try again.");
-      console.error(error);
-    }
+    startTransition(async () => {
+      try {
+        const updatedTier = await upgradeTier(tier);
+        toast.success(`Tier set to ${updatedTier}`);
+        router.push("/");
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to update tier. Try again.");
+      }
+    });
   };
 
-  if (!isLoaded) return null;
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-background px-4">
-      <div className="bg-white dark:bg-card rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
-        <h1 className="text-2xl font-semibold mb-4 text-center">
-          Choose Your Tier
-        </h1>
+    <div>
+      {/* Example tier selector */}
+      <select
+        title="tier_select"
+        value={tier || ""}
+        onChange={(e) =>
+          setTier(e.target.value as "free" | "silver" | "gold" | "platinum")
+        }
+        className="border p-2 rounded"
+      >
+        <option value="" disabled>
+          Select a tier
+        </option>
+        <option value="free">Free</option>
+        <option value="silver">Silver</option>
+        <option value="gold">Gold</option>
+        <option value="platinum">Platinum</option>
+      </select>
 
-        <Select value={tier} onValueChange={(value) => setTier(value)}>
-          <SelectTrigger className="w-full mb-6">
-            <SelectValue placeholder="Select a Tier" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="gold">Gold</SelectItem>
-            <SelectItem value="platinum">Platinum</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button
-          onClick={handleSubmit}
-          className="w-full bg-[#6c47ff] text-white font-medium"
-        >
-          Save and Continue
-        </Button>
-      </div>
+      <button
+        onClick={handleSubmit}
+        disabled={isPending}
+        className="ml-4 bg-indigo-600 text-white px-4 py-2 rounded disabled:opacity-50"
+      >
+        {isPending ? "Updating..." : "Update Tier"}
+      </button>
     </div>
   );
-}
+};
+
+export default TierForm;
