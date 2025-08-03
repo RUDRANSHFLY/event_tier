@@ -6,3 +6,7 @@ export interface Event {
     tier : "gold" | "silver" | "platinum" | "free",
     event_date : string
 }
+
+export type tier = {
+    tier : "free" | 'silver' | 'gold' | 'platinum'
+}
