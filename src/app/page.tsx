@@ -14,7 +14,7 @@ const HomePage = async () => {
 
   const user = await currentUser();
   const userTier =
-    (user?.publicMetadata?.tier as "free" | "silver" | "gold" | "platinum");
+    (user?.publicMetadata?.tier as "free" | "silver" | "gold" | "platinum") || "free";
 
   const { data: events, error } = await supabase
     .from("events")
